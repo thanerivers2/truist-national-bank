@@ -7,45 +7,45 @@
 body{
 margin:0;
 font-family:Segoe UI,Arial;
-background:#f4f6fb;
+background:#f2f4f8;
 }
 
 .header{
 background:#1e3c72;
 color:white;
-padding:20px;
+padding:18px;
 font-size:20px;
 font-weight:bold;
 }
 
 .container{
 padding:20px;
-max-width:500px;
+max-width:480px;
 margin:auto;
 }
 
 .card{
 background:white;
-padding:20px;
-border-radius:15px;
+padding:18px;
+border-radius:14px;
 margin-bottom:15px;
-box-shadow:0 5px 15px rgba(0,0,0,0.08);
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
 }
 
-.balance-card{
+.balance{
 background:linear-gradient(135deg,#1e3c72,#2a5298);
 color:white;
 }
 
 button{
 padding:10px;
+width:100%;
 border:none;
 border-radius:8px;
 margin-top:8px;
-cursor:pointer;
 background:#1e88e5;
 color:white;
-width:100%;
+cursor:pointer;
 }
 
 input{
@@ -56,13 +56,13 @@ border-radius:8px;
 border:1px solid #ccc;
 }
 
-.hidden{display:none;}
-
 .tx{
 font-size:13px;
 border-bottom:1px solid #ddd;
 padding:6px 0;
 }
+
+.hidden{display:none;}
 </style>
 </head>
 <body>
@@ -72,19 +72,21 @@ padding:6px 0;
 <input id="loginUser" placeholder="Username">
 <input id="loginPass" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
-<p id="loginMsg"></p>
+<p id="msg"></p>
 </div>
 
 <div id="app" class="hidden">
-<div class="header" id="appHeader"></div>
-<div class="container" id="appContent"></div>
+<div class="header" id="topBar"></div>
+<div class="container" id="content"></div>
 </div>
 
 <script>
-let bankData = JSON.parse(localStorage.getItem("bankData"));
+const STORAGE_KEY="futurebank_demo_v2";
 
-if(!bankData){
-bankData={
+let bank=JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+if(!bank){
+bank={
 users:{
 admin:{
 password:"admin123",
@@ -95,30 +97,30 @@ account:"0000000000",
 history:[]
 }
 },
-accountCounter:1000000001
+counter:1000000001
 };
-localStorage.setItem("bankData",JSON.stringify(bankData));
+localStorage.setItem(STORAGE_KEY,JSON.stringify(bank));
 }
 
-let currentUser=null;
+let current=null;
 
 function save(){
-localStorage.setItem("bankData",JSON.stringify(bankData));
+localStorage.setItem(STORAGE_KEY,JSON.stringify(bank));
 }
 
 function login(){
 let u=loginUser.value.trim();
 let p=loginPass.value.trim();
-let user=bankData.users[u];
 
-if(user && user.password===p){
-currentUser=u;
+if(!bank.users[u] || bank.users[u].password!==p){
+msg.innerText="Invalid login";
+return;
+}
+
+current=u;
 loginPage.classList.add("hidden");
 app.classList.remove("hidden");
 loadDashboard();
-}else{
-loginMsg.innerText="Invalid login";
-}
 }
 
 function logout(){
@@ -126,8 +128,8 @@ location.reload();
 }
 
 function loadDashboard(){
-let user=bankData.users[currentUser];
-appHeader.innerText="Welcome, "+user.name;
+let user=bank.users[current];
+topBar.innerText="Welcome, "+user.name;
 
 if(user.role==="admin"){
 loadAdmin();
@@ -137,82 +139,78 @@ loadUser();
 }
 
 function loadAdmin(){
-let html=`
-<div class="card balance-card">
+content.innerHTML=`
+<div class="card balance">
 <h3>Admin Dashboard</h3>
-Total Users: ${Object.keys(bankData.users).length-1}
+<p>Total Users: ${Object.keys(bank.users).length-1}</p>
 </div>
 
 <div class="card">
 <h4>Create User</h4>
-<input id="newName" placeholder="Full Name">
-<input id="newUser" placeholder="Username">
-<input id="newPass" placeholder="Password">
-<button onclick="createUser()">Create</button>
+<input id="nName" placeholder="Full Name">
+<input id="nUser" placeholder="Username">
+<input id="nPass" placeholder="Password">
+<button onclick="createUser()">Create User</button>
 </div>
 
 <div class="card">
-<h4>Deposit To Account</h4>
-<input id="depAcc" placeholder="Account Number">
-<input id="depAmt" placeholder="Amount">
+<h4>Deposit</h4>
+<input id="dAcc" placeholder="Account Number">
+<input id="dAmt" placeholder="Amount">
 <button onclick="deposit()">Deposit</button>
 </div>
 
 <div class="card">
 <h4>All Transactions</h4>
-<div>${bankData.users.admin.history.map(t=><div class='tx'>${t}</div>).join("")}</div>
+${bank.users.admin.history.map(t=><div class="tx">${t}</div>).join("")}
 </div>
 
 <button onclick="logout()">Logout</button>
 `;
-
-appContent.innerHTML=html;
 }
 
 function loadUser(){
-let user=bankData.users[currentUser];
+let user=bank.users[current];
 
-let html=`
-<div class="card balance-card">
-<h3>$${user.balance}</h3>
+content.innerHTML=`
+<div class="card balance">
+<h2>$${user.balance}</h2>
 <p>${user.name}</p>
 <p>Acc: ${user.account}</p>
 </div>
 
 <div class="card">
-<h4>Send Money</h4>
-<input id="sendAcc" placeholder="Receiver Account">
-<input id="sendAmt" placeholder="Amount">
-<button onclick="sendMoney()">Send</button>
+<h4>Send</h4>
+<input id="sAcc" placeholder="Receiver Account">
+<input id="sAmt" placeholder="Amount">
+<button onclick="send()">Send</button>
 </div>
 
 <div class="card">
 <h4>Withdraw</h4>
-<input id="withAmt" placeholder="Amount">
+<input id="wAmt" placeholder="Amount">
 <button onclick="withdraw()">Withdraw</button>
 </div>
 
 <div class="card">
-<h4>Transaction History</h4>
-<div>${user.history.map(t=><div class='tx'>${t}</div>).join("")}</div>
+<h4>Transactions</h4>
+${user.history.map(t=><div class="tx">${t}</div>).join("")}
 </div>
 
 <button onclick="logout()">Logout</button>
 `;
-
-appContent.innerHTML=html;
 }
 
 function createUser(){
-let name=newName.value;
-let uname=newUser.value;
-let pass=newPass.value;
+let name=nName.value.trim();
+let uname=nUser.value.trim();
+let pass=nPass.value.trim();
 
-if(bankData.users[uname]) return alert("Username exists");
+if(bank.users[uname]){alert("Username exists");return;}
 
-let acc=(bankData.accountCounter++).toString();
+let acc=(bank.counter++).toString();
 
-bankData.users[uname]={
+bank.users[uname]={
 password:pass,
 name:name,
 role:"user",
@@ -222,78 +220,83 @@ history:[]
 };
 
 save();
-alert("User created.\nAccount: "+acc);
+alert("User created\nAccount: "+acc);
 loadAdmin();
 }
 
 function deposit(){
-let acc=depAcc.value;
-let amt=parseInt(depAmt.value);
+let acc=dAcc.value.trim();
+let amt=parseInt(dAmt.value);
 
-let user=findByAcc(acc);
-if(!user) return alert("Account not found");
+let u=findAcc(acc);
+if(!u){alert("Account not found");return;}
 
-bankData.users[user].balance+=amt;
+bank.users[u].balance+=amt;
 
-let ref=generateRef();
-let record=new Date().toLocaleString()+" | Deposit $"+amt+" | Ref:"+ref;
+let ref=refGen();
+let record=time()+" | Deposit $"+amt+" | Ref:"+ref;
 
-bankData.users[user].history.push(record);
-bankData.users.admin.history.push(record);
+bank.users[u].history.push(record);
+bank.users.admin.history.push(record);
 
 save();
 loadAdmin();
 }
 
-function sendMoney(){
-let acc=sendAcc.value;
-let amt=parseInt(sendAmt.value);
-let sender=bankData.users[currentUser];
-let receiver=findByAcc(acc);
+function send(){
+let acc=sAcc.value.trim();
+let amt=parseInt(sAmt.value);
+let sender=bank.users[current];
+let receiver=findAcc(acc);
 
-if(!receiver) return alert("Account not found");
-if(sender.balance<amt) return alert("Insufficient funds");
+if(!receiver){alert("Account not found");return;}
+if(sender.balance<amt){alert("Insufficient funds");return;}
 
 sender.balance-=amt;
-bankData.users[receiver].balance+=amt;
+bank.users[receiver].balance+=amt;
 
-let ref=generateRef();
-let record=new Date().toLocaleString()+" | Sent $"+amt+" | Ref:"+ref;
+let ref=refGen();
+let record=time()+" | Sent $"+amt+" | Ref:"+ref;
 
 sender.history.push(record);
-bankData.users[receiver].history.push(record);
-bankData.users.admin.history.push(record);
+bank.users[receiver].history.push(record);
+bank.users.admin.history.push(record);
 
 save();
 loadUser();
 }
 
 function withdraw(){
-let amt=parseInt(withAmt.value);
-let user=bankData.users[currentUser];
-if(user.balance<amt) return alert("Insufficient funds");
+let amt=parseInt(wAmt.value);
+let user=bank.users[current];
+
+if(user.balance<amt){alert("Insufficient funds");return;}
 
 user.balance-=amt;
 
-let ref=generateRef();
-let record=new Date().toLocaleString()+" | Withdraw $"+amt+" | Ref:"+ref;
+let ref=refGen();
+let record=time()+" | Withdraw $"+amt+" | Ref:"+ref;
 
 user.history.push(record);
-bankData.users.admin.history.push(record);
+bank.users.admin.history.push(record);
 
 save();
 loadUser();
 }
 
-function findByAcc(acc){
-for(let u in bankData.users){
-if(bankData.users[u].account===acc) return u;
+function findAcc(acc){
+for(let u in bank.users){
+if(bank.users[u].account===acc){return u;}
 }
 return null;
 }
 
-function generateRef(){
+function refGen(){
 return "TX"+Math.floor(Math.random()*1000000);
+}
+
+function time(){
+return new Date().toLocaleString();
 }
 </script>
 
